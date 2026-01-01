@@ -1,737 +1,245 @@
-<!doctype html>
-<html lang="en" class="h-full">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Animal Classification Game</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
-    
-    body {
-      font-family: 'Fredoka', sans-serif;
-      overflow-x: hidden;
-      user-select: none;
-      -webkit-user-select: none;
-      touch-action: pan-y;
-    }
-    
-    /* Mobile-optimized draggables */
-    .draggable {
-      cursor: grab;
-      touch-action: none;
-      transition: all 0.2s ease;
-      user-select: none;
-      -webkit-user-select: none;
-      z-index: 10;
-    }
-    
-    .draggable.active {
-      cursor: grabbing;
-      opacity: 0.8;
-      transform: scale(1.05);
-      z-index: 1000;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    }
-    
-    .draggable.returning {
-      transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    }
-    
-    /* Buckets */
-    .bucket {
-      transition: all 0.2s ease;
-      min-height: 140px;
-    }
-    
-    .bucket.drag-over {
-      transform: scale(1.02);
-      box-shadow: 0 0 0 3px rgba(255,255,255,0.7);
-    }
-    
-    .bucket.correct {
-      animation: correctPulse 0.6s ease;
-    }
-    
-    .bucket.wrong {
-      animation: wrongShake 0.5s ease;
-    }
-    
-    @keyframes correctPulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-    }
-    
-    @keyframes wrongShake {
-      0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-10px); }
-      50% { transform: translateX(10px); }
-      75% { transform: translateX(-10px); }
-    }
-    
-    /* Animations */
-    @keyframes popIn {
-      0% { opacity: 0; transform: scale(0.5) translateY(20px); }
-      100% { opacity: 1; transform: scale(1) translateY(0); }
-    }
-    
-    .pop-in {
-      animation: popIn 0.3s ease forwards;
-    }
-    
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-5px); }
-    }
-    
-    .floating {
-      animation: float 3s ease-in-out infinite;
-    }
-    
-    @keyframes confetti {
-      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-      100% { transform: translateY(200px) rotate(360deg); opacity: 0; }
-    }
-    
-    .confetti {
-      position: fixed;
-      width: 12px;
-      height: 12px;
-      pointer-events: none;
-      z-index: 10000;
-    }
-    
-    /* Mobile optimizations */
-    @media (max-width: 640px) {
-      .draggable {
-        padding: 12px 16px !important;
-        font-size: 16px !important;
-        margin: 4px;
-      }
-      
-      .bucket {
-        padding: 12px !important;
-        min-height: 120px !important;
-      }
-      
-      .bucket h2 {
-        font-size: 18px !important;
-      }
-      
-      .bucket p {
-        font-size: 12px !important;
-      }
-      
-      #items-container {
-        max-height: 300px;
-        overflow-y: auto;
-        padding: 10px;
-      }
-    }
-    
-    /* Prevent zoom on double-tap */
-    * {
-      -webkit-touch-callout: none;
-      -webkit-text-size-adjust: none;
-    }
-    
-    /* Hide scrollbar but keep functionality */
-    .hide-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
-    
-    .hide-scrollbar::-webkit-scrollbar {
-      display: none;
-    }
-    
-    /* Better touch feedback */
-    .touch-feedback:active {
-      opacity: 0.7;
-      transform: scale(0.98);
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Animal Classification Pro</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+* { font-family: 'Fredoka', sans-serif; }
+html, body {
+  margin: 0;
+  height: 100%;
+  overscroll-behavior: none;
+}
+.draggable { touch-action:none; cursor:grab; }
+.dragging { opacity:.85; transform:scale(1.05); z-index:999; }
+.bucket.drag-over { outline:4px dashed rgba(255,255,255,.6); }
+</style>
 </head>
-<body class="h-full bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 text-white">
-  <div class="container mx-auto px-4 py-6 max-w-6xl">
-    <!-- Header -->
-    <header class="text-center mb-8">
-      <h1 class="text-3xl md:text-4xl font-bold mb-3">🐾 Animal Classification Game</h1>
-      <p class="text-lg md:text-xl text-emerald-300 mb-2">Drag each animal to its correct category!</p>
-      <p class="text-sm text-gray-300 md:hidden">👆 Tap & drag animals to categories</p>
-    </header>
-    
-    <!-- Stats -->
-    <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-4 md:p-6 mb-6">
-      <div class="flex flex-wrap items-center justify-between gap-4">
-        <div class="flex items-center space-x-6">
-          <div class="text-center">
-            <div class="text-sm opacity-80">Score</div>
-            <div id="score" class="text-2xl md:text-3xl font-bold text-yellow-400">0</div>
-          </div>
-          <div class="text-center">
-            <div class="text-sm opacity-80">Streak</div>
-            <div id="streak" class="text-2xl md:text-3xl font-bold text-orange-400">🔥0</div>
-          </div>
-        </div>
-        
-        <div class="flex-1 max-w-md">
-          <div class="flex justify-between text-sm mb-2">
-            <span>Progress</span>
-            <span id="progress-text">0/20</span>
-          </div>
-          <div class="h-3 bg-white/20 rounded-full overflow-hidden">
-            <div id="progress-bar" class="h-full bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full transition-all duration-500" style="width: 0%"></div>
-          </div>
-        </div>
-        
-        <button id="reset-btn" class="px-4 py-3 bg-white/20 hover:bg-white/30 rounded-xl font-medium transition-all touch-feedback">
-          🔄 Reset Game
-        </button>
-      </div>
-    </div>
-    
-    <!-- Categories Grid - Now 4 columns on desktop -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
-      <!-- Mammals -->
-      <div class="bucket rounded-2xl p-4" data-category="mammals" style="background: linear-gradient(135deg, #e94560, #c73e54);">
-        <div class="text-center mb-3">
-          <div class="text-4xl mb-2">🦁</div>
-          <h3 class="text-xl font-bold">Mammals</h3>
-          <p class="text-sm opacity-80">Warm-blooded, fur, milk</p>
-        </div>
-        <div class="bucket-items flex flex-wrap gap-2 justify-center min-h-16" id="mammals-bucket"></div>
-      </div>
-      
-      <!-- Reptiles -->
-      <div class="bucket rounded-2xl p-4" data-category="reptiles" style="background: linear-gradient(135deg, #0f9b0f, #0d850d);">
-        <div class="text-center mb-3">
-          <div class="text-4xl mb-2">🐊</div>
-          <h3 class="text-xl font-bold">Reptiles</h3>
-          <p class="text-sm opacity-80">Scales, cold-blooded, eggs</p>
-        </div>
-        <div class="bucket-items flex flex-wrap gap-2 justify-center min-h-16" id="reptiles-bucket"></div>
-      </div>
-      
-      <!-- Amphibians -->
-      <div class="bucket rounded-2xl p-4" data-category="amphibians" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
-        <div class="text-center mb-3">
-          <div class="text-4xl mb-2">🐸</div>
-          <h3 class="text-xl font-bold">Amphibians</h3>
-          <p class="text-sm opacity-80">Moist skin, water & land</p>
-        </div>
-        <div class="bucket-items flex flex-wrap gap-2 justify-center min-h-16" id="amphibians-bucket"></div>
-      </div>
-      
-      <!-- Birds -->
-      <div class="bucket rounded-2xl p-4" data-category="birds" style="background: linear-gradient(135deg, #ffd700, #ffaa00);">
-        <div class="text-center mb-3">
-          <div class="text-4xl mb-2">🦅</div>
-          <h3 class="text-xl font-bold">Birds</h3>
-          <p class="text-sm opacity-80">Feathers, beaks, lay eggs</p>
-        </div>
-        <div class="bucket-items flex flex-wrap gap-2 justify-center min-h-16" id="birds-bucket"></div>
-      </div>
-      
-      <!-- Fish -->
-      <div class="bucket rounded-2xl p-4" data-category="fish" style="background: linear-gradient(135deg, #00b4d8, #0077b6);">
-        <div class="text-center mb-3">
-          <div class="text-4xl mb-2">🐠</div>
-          <h3 class="text-xl font-bold">Fish</h3>
-          <p class="text-sm opacity-80">Gills, scales, live in water</p>
-        </div>
-        <div class="bucket-items flex flex-wrap gap-2 justify-center min-h-16" id="fish-bucket"></div>
-      </div>
-      
-      <!-- Insects -->
-      <div class="bucket rounded-2xl p-4" data-category="insects" style="background: linear-gradient(135deg, #8ac926, #6a994e);">
-        <div class="text-center mb-3">
-          <div class="text-4xl mb-2">🦋</div>
-          <h3 class="text-xl font-bold">Insects</h3>
-          <p class="text-sm opacity-80">6 legs, exoskeleton</p>
-        </div>
-        <div class="bucket-items flex flex-wrap gap-2 justify-center min-h-16" id="insects-bucket"></div>
-      </div>
-      
-      <!-- Arachnids -->
-      <div class="bucket rounded-2xl p-4" data-category="arachnids" style="background: linear-gradient(135deg, #7209b7, #560bad);">
-        <div class="text-center mb-3">
-          <div class="text-4xl mb-2">🕷️</div>
-          <h3 class="text-xl font-bold">Arachnids</h3>
-          <p class="text-sm opacity-80">8 legs, no antennae</p>
-        </div>
-        <div class="bucket-items flex flex-wrap gap-2 justify-center min-h-16" id="arachnids-bucket"></div>
-      </div>
-      
-      <!-- Marine -->
-      <div class="bucket rounded-2xl p-4" data-category="marine" style="background: linear-gradient(135deg, #0096c7, #023e8a);">
-        <div class="text-center mb-3">
-          <div class="text-4xl mb-2">🐙</div>
-          <h3 class="text-xl font-bold">Marine Life</h3>
-          <p class="text-sm opacity-80">Ocean creatures</p>
-        </div>
-        <div class="bucket-items flex flex-wrap gap-2 justify-center min-h-16" id="marine-bucket"></div>
-      </div>
-    </div>
-    
-    <!-- Draggable Items -->
-    <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-4 md:p-6">
-      <h3 class="text-center text-xl mb-4">Animals to Classify</h3>
-      <div id="items-container" class="flex flex-wrap gap-3 justify-center"></div>
-    </div>
-    
-    <!-- Feedback Toast -->
-    <div id="feedback-toast" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-xl font-bold text-lg shadow-2xl transition-all duration-300 opacity-0 translate-y-4 pointer-events-none z-50"></div>
-    
-    <!-- Success Modal -->
-    <div id="success-modal" class="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-500 z-50">
-      <div class="bg-gradient-to-br from-emerald-600 to-cyan-700 rounded-3xl p-8 m-4 max-w-md text-center transform scale-95 transition-transform duration-500">
-        <div class="text-6xl mb-4">🎉</div>
-        <h2 class="text-3xl font-bold mb-2">Congratulations!</h2>
-        <p class="mb-6">You've classified all animals correctly!</p>
-        
-        <div class="bg-white/20 rounded-xl p-4 mb-6">
-          <div class="text-2xl font-bold text-yellow-300 mb-2">
-            Final Score: <span id="final-score">0</span>
-          </div>
-          <div class="text-lg">
-            Best Streak: <span id="final-streak">0</span>
-          </div>
-        </div>
-        
-        <button id="play-again-btn" class="px-8 py-3 bg-white text-emerald-700 font-bold rounded-xl hover:bg-gray-100 transition-all touch-feedback">
-          🔄 Play Again
-        </button>
-      </div>
-    </div>
-  </div>
 
-  <script>
-    // Game data - 8 categories with 20 animals
-    const animals = [
-      // Mammals
-      { id: 1, name: "Dolphin", emoji: "🐬", category: "mammals" },
-      { id: 2, name: "Bat", emoji: "🦇", category: "mammals" },
-      { id: 3, name: "Elephant", emoji: "🐘", category: "mammals" },
-      { id: 4, name: "Kangaroo", emoji: "🦘", category: "mammals" },
-      
-      // Reptiles
-      { id: 5, name: "Crocodile", emoji: "🐊", category: "reptiles" },
-      { id: 6, name: "Turtle", emoji: "🐢", category: "reptiles" },
-      { id: 7, name: "Snake", emoji: "🐍", category: "reptiles" },
-      { id: 8, name: "Chameleon", emoji: "🦎", category: "reptiles" },
-      
-      // Amphibians
-      { id: 9, name: "Frog", emoji: "🐸", category: "amphibians" },
-      { id: 10, name: "Toad", emoji: "🐸", category: "amphibians" },
-      { id: 11, name: "Salamander", emoji: "🦎", category: "amphibians" },
-      
-      // Birds
-      { id: 12, name: "Eagle", emoji: "🦅", category: "birds" },
-      { id: 13, name: "Penguin", emoji: "🐧", category: "birds" },
-      { id: 14, name: "Owl", emoji: "🦉", category: "birds" },
-      
-      // Fish
-      { id: 15, name: "Shark", emoji: "🦈", category: "fish" },
-      { id: 16, name: "Clownfish", emoji: "🐠", category: "fish" },
-      
-      // Insects
-      { id: 17, name: "Butterfly", emoji: "🦋", category: "insects" },
-      { id: 18, name: "Ladybug", emoji: "🐞", category: "insects" },
-      
-      // Arachnids
-      { id: 19, name: "Spider", emoji: "🕷️", category: "arachnids" },
-      
-      // Marine
-      { id: 20, name: "Octopus", emoji: "🐙", category: "marine" }
-    ];
+<body class="bg-gradient-to-br from-slate-900 via-indigo-900 to-blue-900 text-white">
 
-    // Game state
-    let gameState = {
-      score: 0,
-      streak: 0,
-      bestStreak: 0,
-      sorted: [],
-      remaining: [...animals],
-      isDragging: false,
-      currentDraggable: null,
-      dragOffset: { x: 0, y: 0 }
-    };
+<div class="max-w-7xl mx-auto p-4">
 
-    // DOM Elements
-    let dragGhost = null;
-    let startX = 0, startY = 0;
+<!-- HEADER -->
+<header class="text-center mb-4">
+  <h1 class="text-3xl md:text-4xl font-bold">🧠 Animal Classification PRO</h1>
+  <p class="text-emerald-300">Learn biology like a game</p>
+</header>
 
-    // Initialize game
-    function initGame() {
-      renderItems();
-      updateProgress();
-      setupEventListeners();
-      
-      // Check for mobile
-      if ('ontouchstart' in window) {
-        document.body.classList.add('touch-device');
-      }
-    }
+<!-- CONTROL BAR -->
+<div class="bg-white/10 rounded-xl p-4 mb-4 flex flex-wrap gap-3 justify-between items-center">
 
-    // Shuffle array
-    function shuffleArray(array) {
-      const arr = [...array];
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
-      return arr;
-    }
+<div class="flex gap-4">
+  <div>Score<br><b id="score">0</b></div>
+  <div>Lives<br><b id="lives">❤️❤️❤️</b></div>
+  <div>Hints<br><b id="hints">💡💡</b></div>
+</div>
 
-    // Render draggable items
-    function renderItems() {
-      const container = document.getElementById('items-container');
-      container.innerHTML = '';
-      
-      const shuffled = shuffleArray(gameState.remaining);
-      
-      shuffled.forEach((animal, index) => {
-        const item = document.createElement('div');
-        item.className = 'draggable bg-white text-gray-800 rounded-xl px-4 py-3 shadow-lg flex items-center gap-3 pop-in touch-feedback';
-        item.style.animationDelay = `${index * 0.05}s`;
-        item.dataset.id = animal.id;
-        item.dataset.category = animal.category;
-        
-        item.innerHTML = `
-          <span class="text-2xl">${animal.emoji}</span>
-          <span class="font-bold">${animal.name}</span>
-        `;
-        
-        // Desktop events
-        item.addEventListener('mousedown', startDrag);
-        
-        // Mobile events
-        item.addEventListener('touchstart', startDragTouch, { passive: false });
-        
-        container.appendChild(item);
-      });
-    }
+<div class="flex gap-2">
+<select id="level" class="text-black rounded px-2">
+  <option value="easy">Easy</option>
+  <option value="medium">Medium</option>
+  <option value="hard">Hard</option>
+</select>
 
-    // Update progress display
-    function updateProgress() {
-      const total = animals.length;
-      const sorted = gameState.sorted.length;
-      const percentage = (sorted / total) * 100;
-      
-      document.getElementById('score').textContent = gameState.score;
-      document.getElementById('streak').textContent = `🔥${gameState.streak}`;
-      document.getElementById('progress-text').textContent = `${sorted}/${total}`;
-      document.getElementById('progress-bar').style.width = `${percentage}%`;
-      
-      if (sorted === total) {
-        setTimeout(showSuccessModal, 500);
-      }
-    }
+<button onclick="toggleMode()" class="bg-white/20 px-3 py-1 rounded">
+🖐 Tap Mode
+</button>
 
-    // Start drag (mouse)
-    function startDrag(e) {
-      e.preventDefault();
-      const item = e.target.closest('.draggable');
-      if (!item) return;
-      
-      gameState.isDragging = true;
-      gameState.currentDraggable = item;
-      
-      const rect = item.getBoundingClientRect();
-      gameState.dragOffset.x = e.clientX - rect.left;
-      gameState.dragOffset.y = e.clientY - rect.top;
-      
-      createDragGhost(item, e.clientX, e.clientY);
-      document.addEventListener('mousemove', doDrag);
-      document.addEventListener('mouseup', endDrag);
-    }
+<button onclick="resetGame()" class="bg-red-500/80 px-3 py-1 rounded">
+Reset
+</button>
+</div>
 
-    // Start drag (touch)
-    function startDragTouch(e) {
-      e.preventDefault();
-      const item = e.target.closest('.draggable');
-      if (!item) return;
-      
-      gameState.isDragging = true;
-      gameState.currentDraggable = item;
-      
-      const touch = e.touches[0];
-      const rect = item.getBoundingClientRect();
-      gameState.dragOffset.x = touch.clientX - rect.left;
-      gameState.dragOffset.y = touch.clientY - rect.top;
-      
-      createDragGhost(item, touch.clientX, touch.clientY);
-      document.addEventListener('touchmove', doDragTouch, { passive: false });
-      document.addEventListener('touchend', endDrag);
-    }
+</div>
 
-    // Create drag ghost element
-    function createDragGhost(item, x, y) {
-      dragGhost = item.cloneNode(true);
-      dragGhost.className = 'fixed z-50 opacity-90 pointer-events-none rounded-xl px-4 py-3 flex items-center gap-3 bg-white text-gray-800 shadow-2xl';
-      dragGhost.style.left = `${x - gameState.dragOffset.x}px`;
-      dragGhost.style.top = `${y - gameState.dragOffset.y}px`;
-      dragGhost.style.transform = 'scale(1.1)';
-      document.body.appendChild(dragGhost);
-      
-      item.classList.add('active');
-    }
+<!-- BUCKETS -->
+<div id="buckets" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4"></div>
 
-    // Do drag (mouse)
-    function doDrag(e) {
-      if (!gameState.isDragging || !dragGhost) return;
-      
-      dragGhost.style.left = `${e.clientX - gameState.dragOffset.x}px`;
-      dragGhost.style.top = `${e.clientY - gameState.dragOffset.y}px`;
-      
-      updateBucketHover(e.clientX, e.clientY);
-    }
+<!-- ITEMS -->
+<div class="bg-white/10 rounded-xl p-4">
+<h3 class="text-center opacity-70 mb-2">Animals</h3>
+<div id="items" class="flex flex-wrap justify-center gap-3"></div>
+</div>
 
-    // Do drag (touch)
-    function doDragTouch(e) {
-      if (!gameState.isDragging || !dragGhost) return;
-      e.preventDefault();
-      
-      const touch = e.touches[0];
-      dragGhost.style.left = `${touch.clientX - gameState.dragOffset.x}px`;
-      dragGhost.style.top = `${touch.clientY - gameState.dragOffset.y}px`;
-      
-      updateBucketHover(touch.clientX, touch.clientY);
-    }
+</div>
 
-    // Update bucket hover state
-    function updateBucketHover(x, y) {
-      document.querySelectorAll('.bucket').forEach(bucket => {
-        const rect = bucket.getBoundingClientRect();
-        if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-          bucket.classList.add('drag-over');
-        } else {
-          bucket.classList.remove('drag-over');
-        }
-      });
-    }
+<script>
+/* =======================
+   GAME CONFIG
+======================= */
+const CATEGORIES = {
+ mammals:{icon:"🦁",color:"from-red-500 to-rose-600"},
+ reptiles:{icon:"🦎",color:"from-green-600 to-emerald-700"},
+ amphibians:{icon:"🐸",color:"from-blue-500 to-indigo-600"},
+ birds:{icon:"🐦",color:"from-yellow-400 to-orange-500"},
+ fish:{icon:"🐟",color:"from-cyan-500 to-sky-600"},
+ insects:{icon:"🐞",color:"from-lime-500 to-green-600"}
+};
 
-    // End drag
-    function endDrag(e) {
-      if (!gameState.isDragging || !gameState.currentDraggable) return;
-      
-      let clientX, clientY;
-      if (e.type === 'touchend') {
-        const touch = e.changedTouches[0];
-        clientX = touch.clientX;
-        clientY = touch.clientY;
-      } else {
-        clientX = e.clientX;
-        clientY = e.clientY;
-      }
-      
-      // Check for drop on bucket
-      let dropped = false;
-      document.querySelectorAll('.bucket').forEach(bucket => {
-        const rect = bucket.getBoundingClientRect();
-        if (clientX >= rect.left && clientX <= rect.right && 
-            clientY >= rect.top && clientY <= rect.bottom) {
-          handleDrop(gameState.currentDraggable.dataset.id, bucket.dataset.category, bucket);
-          dropped = true;
-        }
-        bucket.classList.remove('drag-over');
-      });
-      
-      // Remove drag ghost
-      if (dragGhost) {
-        dragGhost.remove();
-        dragGhost = null;
-      }
-      
-      // Reset dragging state
-      gameState.currentDraggable.classList.remove('active');
-      gameState.isDragging = false;
-      gameState.currentDraggable = null;
-      
-      // Clean up event listeners
-      document.removeEventListener('mousemove', doDrag);
-      document.removeEventListener('touchmove', doDragTouch);
-      document.removeEventListener('mouseup', endDrag);
-      document.removeEventListener('touchend', endDrag);
-    }
+const POOL = {
+ easy:[
+  ["Dog","🐶","mammals"],["Cat","🐱","mammals"],
+  ["Frog","🐸","amphibians"],["Snake","🐍","reptiles"],
+  ["Parrot","🦜","birds"],["Fish","🐟","fish"]
+ ],
+ medium:[
+  ["Bat","🦇","mammals"],["Whale","🐋","mammals"],
+  ["Penguin","🐧","birds"],["Lizard","🦎","reptiles"],
+  ["Shark","🦈","fish"],["Bee","🐝","insects"]
+ ],
+ hard:[
+  ["Platypus","🦫","mammals"],
+  ["Salamander","🦎","amphibians"],
+  ["Eagle","🦅","birds"],
+  ["Crocodile","🐊","reptiles"],
+  ["Butterfly","🦋","insects"]
+ ]
+};
 
-    // Handle drop
-    function handleDrop(itemId, targetCategory, bucketElement) {
-      const animal = animals.find(a => a.id === parseInt(itemId));
-      if (!animal) return;
-      
-      const isCorrect = animal.category === targetCategory;
-      
-      if (isCorrect) {
-        // Correct drop
-        gameState.score += 10 + gameState.streak * 2;
-        gameState.streak++;
-        gameState.bestStreak = Math.max(gameState.bestStreak, gameState.streak);
-        gameState.sorted.push(animal);
-        gameState.remaining = gameState.remaining.filter(a => a.id !== animal.id);
-        
-        // Add to bucket
-        const bucketItems = bucketElement.querySelector('.bucket-items');
-        const sortedItem = document.createElement('div');
-        sortedItem.className = 'bg-white/30 rounded-lg px-3 py-2 flex items-center gap-2 pop-in';
-        sortedItem.innerHTML = `<span>${animal.emoji}</span><span class="font-medium">${animal.name}</span>`;
-        bucketItems.appendChild(sortedItem);
-        
-        // Visual feedback
-        bucketElement.classList.add('correct');
-        setTimeout(() => bucketElement.classList.remove('correct'), 600);
-        
-        createConfetti(bucketElement.getBoundingClientRect());
-        showFeedback(true, `✓ Correct! +${10 + (gameState.streak - 1) * 2} points`);
-        
-        // Re-render items
-        renderItems();
-      } else {
-        // Wrong drop
-        gameState.streak = 0;
-        gameState.score = Math.max(0, gameState.score - 5);
-        
-        bucketElement.classList.add('wrong');
-        setTimeout(() => bucketElement.classList.remove('wrong'), 500);
-        
-        const categoryName = getCategoryName(targetCategory);
-        showFeedback(false, `✗ ${animal.name} is not a ${categoryName}`);
-      }
-      
-      updateProgress();
-    }
+/* =======================
+   STATE
+======================= */
+let state={
+ score:0,
+ lives:3,
+ hints:2,
+ mode:"drag",
+ level:"easy",
+ animals:[],
+};
 
-    // Get category name for display
-    function getCategoryName(category) {
-      const names = {
-        mammals: 'mammal',
-        reptiles: 'reptile',
-        amphibians: 'amphibian',
-        birds: 'bird',
-        fish: 'fish',
-        insects: 'insect',
-        arachnids: 'arachnid',
-        marine: 'marine animal'
-      };
-      return names[category] || category;
-    }
+/* =======================
+   INIT
+======================= */
+function init(){
+ buildBuckets();
+ loadAnimals();
+ renderItems();
+ updateUI();
+}
+init();
 
-    // Show feedback toast
-    function showFeedback(isCorrect, message) {
-      const toast = document.getElementById('feedback-toast');
-      toast.textContent = message;
-      toast.className = `fixed bottom-6 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-xl font-bold text-lg shadow-2xl transition-all duration-300 z-50`;
-      toast.style.backgroundColor = isCorrect ? '#10b981' : '#ef4444';
-      toast.style.opacity = '1';
-      toast.style.transform = 'translate(-50%, 0)';
-      
-      setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translate(-50%, 20px)';
-      }, 2000);
-    }
+/* =======================
+   BUILD BUCKETS
+======================= */
+function buildBuckets(){
+ const b=document.getElementById("buckets");
+ b.innerHTML="";
+ Object.entries(CATEGORIES).forEach(([key,val])=>{
+  const d=document.createElement("div");
+  d.className=`bucket p-4 rounded-xl bg-gradient-to-br ${val.color}`;
+  d.dataset.cat=key;
+  d.innerHTML=`<h2 class="text-xl text-center">${val.icon} ${key}</h2>
+  <div class="bucket-items flex justify-center gap-2 mt-2"></div>`;
+  d.ondragover=e=>{e.preventDefault();d.classList.add("drag-over");};
+  d.ondragleave=()=>d.classList.remove("drag-over");
+  d.ondrop=e=>{
+    e.preventDefault();d.classList.remove("drag-over");
+    handleDrop(e.dataTransfer.getData("id"),key,d);
+  };
+  b.appendChild(d);
+ });
+}
 
-    // Create confetti effect
-    function createConfetti(rect) {
-      const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#ffd166', '#06d6a0'];
-      
-      for (let i = 0; i < 15; i++) {
-        const confetti = document.createElement('div');
-        confetti.className = 'confetti';
-        confetti.style.left = `${rect.left + rect.width / 2 + (Math.random() - 0.5) * 100}px`;
-        confetti.style.top = `${rect.top + rect.height / 2}px`;
-        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-        confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
-        document.body.appendChild(confetti);
-        
-        // Animate
-        const angle = Math.random() * Math.PI * 2;
-        const distance = 100 + Math.random() * 100;
-        const endX = Math.cos(angle) * distance;
-        const endY = Math.sin(angle) * distance;
-        
-        confetti.animate([
-          { transform: 'translate(0, 0) rotate(0deg)', opacity: 1 },
-          { transform: `translate(${endX}px, ${endY}px) rotate(${Math.random() * 720}deg)`, opacity: 0 }
-        ], {
-          duration: 1000 + Math.random() * 500,
-          easing: 'cubic-bezier(0.215, 0.610, 0.355, 1)'
-        });
-        
-        setTimeout(() => confetti.remove(), 1500);
-      }
-    }
+/* =======================
+   LOAD ANIMALS
+======================= */
+function loadAnimals(){
+ state.level=document.getElementById("level").value;
+ state.animals=[...POOL[state.level]].map((a,i)=>({
+  id:i+Date.now(),
+  name:a[0],emoji:a[1],cat:a[2]
+ }));
+}
 
-    // Show success modal
-    function showSuccessModal() {
-      const modal = document.getElementById('success-modal');
-      document.getElementById('final-score').textContent = gameState.score;
-      document.getElementById('final-streak').textContent = gameState.bestStreak;
-      
-      modal.style.opacity = '1';
-      modal.style.pointerEvents = 'auto';
-      
-      setTimeout(() => {
-        modal.querySelector('div').style.transform = 'scale(1)';
-      }, 50);
-    }
+/* =======================
+   RENDER ITEMS
+======================= */
+function renderItems(){
+ const i=document.getElementById("items");
+ i.innerHTML="";
+ state.animals.forEach(a=>{
+  const d=document.createElement("div");
+  d.className="draggable bg-white text-black px-4 py-2 rounded-lg flex gap-2";
+  d.innerHTML=`<span class="text-2xl">${a.emoji}</span>${a.name}`;
+  d.draggable=true;
+  d.dataset.id=a.id;
+  d.onclick=()=>state.mode==="tap" && tapSelect(a);
+  d.ondragstart=e=>e.dataTransfer.setData("id",a.id);
+  i.appendChild(d);
+ });
+}
 
-    // Reset game
-    function resetGame() {
-      gameState = {
-        score: 0,
-        streak: 0,
-        bestStreak: 0,
-        sorted: [],
-        remaining: [...animals],
-        isDragging: false,
-        currentDraggable: null,
-        dragOffset: { x: 0, y: 0 }
-      };
-      
-      // Clear buckets
-      document.querySelectorAll('.bucket-items').forEach(el => el.innerHTML = '');
-      
-      // Hide modal
-      const modal = document.getElementById('success-modal');
-      modal.style.opacity = '0';
-      modal.style.pointerEvents = 'none';
-      modal.querySelector('div').style.transform = 'scale(0.95)';
-      
-      // Re-render
-      renderItems();
-      updateProgress();
-      
-      showFeedback(true, 'Game reset! Good luck! 🍀');
-    }
+/* =======================
+   DROP LOGIC
+======================= */
+function handleDrop(id,cat,bucket){
+ const a=state.animals.find(x=>x.id==id);
+ if(!a) return;
+ if(a.cat===cat){
+  state.score+=10;
+  bucket.querySelector(".bucket-items").innerHTML+=a.emoji;
+  state.animals=state.animals.filter(x=>x.id!==a.id);
+ } else {
+  state.lives--;
+ }
+ checkGame();
+ renderItems();
+ updateUI();
+}
 
-    // Setup event listeners
-    function setupEventListeners() {
-      document.getElementById('reset-btn').addEventListener('click', resetGame);
-      document.getElementById('play-again-btn').addEventListener('click', resetGame);
-      
-      // Prevent default drag behavior
-      document.addEventListener('dragstart', (e) => e.preventDefault());
-      
-      // Handle window resize
-      window.addEventListener('resize', () => {
-        if (gameState.isDragging && dragGhost) {
-          dragGhost.remove();
-          dragGhost = null;
-          gameState.isDragging = false;
-        }
-      });
-    }
+/* =======================
+   TAP MODE
+======================= */
+let selected=null;
+function tapSelect(a){
+ selected=a;
+ alert("Now tap correct bucket");
+}
 
-    // Initialize when DOM is loaded
-    document.addEventListener('DOMContentLoaded', initGame);
-  </script>
+/* =======================
+   GAME STATUS
+======================= */
+function checkGame(){
+ if(state.lives<=0){
+  alert("Game Over");
+  resetGame();
+ }
+ if(state.animals.length===0){
+  alert("Level Complete!");
+ }
+}
+
+/* =======================
+   UI
+======================= */
+function updateUI(){
+ document.getElementById("score").textContent=state.score;
+ document.getElementById("lives").textContent="❤️".repeat(state.lives);
+ document.getElementById("hints").textContent="💡".repeat(state.hints);
+}
+
+/* =======================
+   CONTROLS
+======================= */
+function toggleMode(){
+ state.mode=state.mode==="drag"?"tap":"drag";
+ alert("Mode: "+state.mode);
+}
+
+function resetGame(){
+ state.score=0;state.lives=3;state.hints=2;
+ loadAnimals();
+ document.querySelectorAll(".bucket-items").forEach(b=>b.innerHTML="");
+ renderItems();updateUI();
+}
+</script>
+
 </body>
 </html>
