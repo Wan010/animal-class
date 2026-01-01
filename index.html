@@ -1,207 +1,245 @@
-<!doctype html>
-<html lang="en" class="h-full">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Animal Classification Game</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Animal Classification Pro</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
 
 <style>
+* { font-family: 'Fredoka', sans-serif; }
 html, body {
-  height: 100%;
   margin: 0;
+  height: 100%;
   overscroll-behavior: none;
-  touch-action: manipulation;
-  font-family: 'Fredoka', sans-serif;
 }
-
-.draggable {
-  cursor: grab;
-  user-select: none;
-  touch-action: none;
-  transition: transform .15s ease, box-shadow .15s ease;
-}
-.draggable.dragging {
-  opacity: .9;
-  transform: scale(1.05);
-  box-shadow: 0 20px 40px rgba(0,0,0,.25);
-  z-index: 9999;
-}
-
-.bucket {
-  transition: .2s;
-}
-.bucket.drag-over {
-  transform: scale(1.03);
-  box-shadow: 0 0 0 4px rgba(255,255,255,.4);
-}
-
-.progress-fill {
-  transition: width .4s ease;
-}
+.draggable { touch-action:none; cursor:grab; }
+.dragging { opacity:.85; transform:scale(1.05); z-index:999; }
+.bucket.drag-over { outline:4px dashed rgba(255,255,255,.6); }
 </style>
 </head>
 
-<body class="bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 text-white">
+<body class="bg-gradient-to-br from-slate-900 via-indigo-900 to-blue-900 text-white">
 
 <div class="max-w-7xl mx-auto p-4">
 
 <!-- HEADER -->
-<header class="text-center mb-6">
-  <h1 class="text-3xl md:text-4xl font-bold mb-2">🔬 Animal Classification Game</h1>
-  <p class="text-emerald-300">Drag animals to the correct group</p>
+<header class="text-center mb-4">
+  <h1 class="text-3xl md:text-4xl font-bold">🧠 Animal Classification PRO</h1>
+  <p class="text-emerald-300">Learn biology like a game</p>
 </header>
 
-<!-- SCORE -->
-<div class="bg-white/10 rounded-xl p-4 mb-6 flex flex-wrap gap-4 justify-between items-center">
-  <div class="flex gap-6">
-    <div>
-      <div class="text-sm opacity-70">Score</div>
-      <div id="score" class="text-2xl font-bold text-yellow-400">0</div>
-    </div>
-    <div>
-      <div class="text-sm opacity-70">Streak</div>
-      <div id="streak" class="text-2xl font-bold text-orange-400">🔥 0</div>
-    </div>
-  </div>
+<!-- CONTROL BAR -->
+<div class="bg-white/10 rounded-xl p-4 mb-4 flex flex-wrap gap-3 justify-between items-center">
 
-  <div class="flex-1 max-w-md">
-    <div class="flex justify-between text-sm mb-1">
-      <span>Progress</span>
-      <span id="progress-text">0 / 15</span>
-    </div>
-    <div class="h-4 bg-white/20 rounded-full overflow-hidden">
-      <div id="progress-bar" class="progress-fill h-full bg-gradient-to-r from-emerald-400 to-cyan-400" style="width:0%"></div>
-    </div>
-  </div>
+<div class="flex gap-4">
+  <div>Score<br><b id="score">0</b></div>
+  <div>Lives<br><b id="lives">❤️❤️❤️</b></div>
+  <div>Hints<br><b id="hints">💡💡</b></div>
+</div>
 
-  <button onclick="resetGame()" class="bg-white/20 px-4 py-2 rounded-lg hover:bg-white/30">🔄 Reset</button>
+<div class="flex gap-2">
+<select id="level" class="text-black rounded px-2">
+  <option value="easy">Easy</option>
+  <option value="medium">Medium</option>
+  <option value="hard">Hard</option>
+</select>
+
+<button onclick="toggleMode()" class="bg-white/20 px-3 py-1 rounded">
+🖐 Tap Mode
+</button>
+
+<button onclick="resetGame()" class="bg-red-500/80 px-3 py-1 rounded">
+Reset
+</button>
+</div>
+
 </div>
 
 <!-- BUCKETS -->
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-
-<div class="bucket p-4 rounded-xl bg-gradient-to-br from-red-500 to-rose-600" data-category="mammals">
-<h2 class="text-xl font-bold text-center">🦁 Mammals</h2>
-<div class="bucket-items flex flex-wrap justify-center gap-2 mt-3"></div>
-</div>
-
-<div class="bucket p-4 rounded-xl bg-gradient-to-br from-green-600 to-emerald-700" data-category="reptiles">
-<h2 class="text-xl font-bold text-center">🦎 Reptiles</h2>
-<div class="bucket-items flex flex-wrap justify-center gap-2 mt-3"></div>
-</div>
-
-<div class="bucket p-4 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600" data-category="amphibians">
-<h2 class="text-xl font-bold text-center">🐸 Amphibians</h2>
-<div class="bucket-items flex flex-wrap justify-center gap-2 mt-3"></div>
-</div>
-
-<div class="bucket p-4 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500" data-category="birds">
-<h2 class="text-xl font-bold text-center">🐦 Birds</h2>
-<div class="bucket-items flex flex-wrap justify-center gap-2 mt-3"></div>
-</div>
-
-<div class="bucket p-4 rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600" data-category="fish">
-<h2 class="text-xl font-bold text-center">🐟 Fish</h2>
-<div class="bucket-items flex flex-wrap justify-center gap-2 mt-3"></div>
-</div>
-
-<div class="bucket p-4 rounded-xl bg-gradient-to-br from-lime-500 to-green-600" data-category="insects">
-<h2 class="text-xl font-bold text-center">🐞 Insects</h2>
-<div class="bucket-items flex flex-wrap justify-center gap-2 mt-3"></div>
-</div>
-
-</div>
+<div id="buckets" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4"></div>
 
 <!-- ITEMS -->
 <div class="bg-white/10 rounded-xl p-4">
-<h3 class="text-center opacity-70 mb-4">Animals to Classify</h3>
+<h3 class="text-center opacity-70 mb-2">Animals</h3>
 <div id="items" class="flex flex-wrap justify-center gap-3"></div>
 </div>
 
 </div>
 
 <script>
-const animals = [
- {id:1,name:"Dolphin",emoji:"🐬",category:"mammals"},
- {id:2,name:"Elephant",emoji:"🐘",category:"mammals"},
- {id:3,name:"Bat",emoji:"🦇",category:"mammals"},
+/* =======================
+   GAME CONFIG
+======================= */
+const CATEGORIES = {
+ mammals:{icon:"🦁",color:"from-red-500 to-rose-600"},
+ reptiles:{icon:"🦎",color:"from-green-600 to-emerald-700"},
+ amphibians:{icon:"🐸",color:"from-blue-500 to-indigo-600"},
+ birds:{icon:"🐦",color:"from-yellow-400 to-orange-500"},
+ fish:{icon:"🐟",color:"from-cyan-500 to-sky-600"},
+ insects:{icon:"🐞",color:"from-lime-500 to-green-600"}
+};
 
- {id:4,name:"Snake",emoji:"🐍",category:"reptiles"},
- {id:5,name:"Crocodile",emoji:"🐊",category:"reptiles"},
+const POOL = {
+ easy:[
+  ["Dog","🐶","mammals"],["Cat","🐱","mammals"],
+  ["Frog","🐸","amphibians"],["Snake","🐍","reptiles"],
+  ["Parrot","🦜","birds"],["Fish","🐟","fish"]
+ ],
+ medium:[
+  ["Bat","🦇","mammals"],["Whale","🐋","mammals"],
+  ["Penguin","🐧","birds"],["Lizard","🦎","reptiles"],
+  ["Shark","🦈","fish"],["Bee","🐝","insects"]
+ ],
+ hard:[
+  ["Platypus","🦫","mammals"],
+  ["Salamander","🦎","amphibians"],
+  ["Eagle","🦅","birds"],
+  ["Crocodile","🐊","reptiles"],
+  ["Butterfly","🦋","insects"]
+ ]
+};
 
- {id:6,name:"Frog",emoji:"🐸",category:"amphibians"},
- {id:7,name:"Toad",emoji:"🐸",category:"amphibians"},
+/* =======================
+   STATE
+======================= */
+let state={
+ score:0,
+ lives:3,
+ hints:2,
+ mode:"drag",
+ level:"easy",
+ animals:[],
+};
 
- {id:8,name:"Eagle",emoji:"🦅",category:"birds"},
- {id:9,name:"Parrot",emoji:"🦜",category:"birds"},
- {id:10,name:"Penguin",emoji:"🐧",category:"birds"},
+/* =======================
+   INIT
+======================= */
+function init(){
+ buildBuckets();
+ loadAnimals();
+ renderItems();
+ updateUI();
+}
+init();
 
- {id:11,name:"Shark",emoji:"🦈",category:"fish"},
- {id:12,name:"Goldfish",emoji:"🐠",category:"fish"},
-
- {id:13,name:"Bee",emoji:"🐝",category:"insects"},
- {id:14,name:"Butterfly",emoji:"🦋",category:"insects"},
- {id:15,name:"Ladybug",emoji:"🐞",category:"insects"},
-];
-
-let state={score:0,streak:0,sorted:[],remaining:[...animals]};
-
-const itemsDiv=document.getElementById("items");
-
-function render(){
- itemsDiv.innerHTML="";
- state.remaining.sort(()=>Math.random()-0.5).forEach(a=>{
+/* =======================
+   BUILD BUCKETS
+======================= */
+function buildBuckets(){
+ const b=document.getElementById("buckets");
+ b.innerHTML="";
+ Object.entries(CATEGORIES).forEach(([key,val])=>{
   const d=document.createElement("div");
-  d.className="draggable bg-white text-gray-800 px-4 py-2 rounded-lg flex gap-2 items-center";
+  d.className=`bucket p-4 rounded-xl bg-gradient-to-br ${val.color}`;
+  d.dataset.cat=key;
+  d.innerHTML=`<h2 class="text-xl text-center">${val.icon} ${key}</h2>
+  <div class="bucket-items flex justify-center gap-2 mt-2"></div>`;
+  d.ondragover=e=>{e.preventDefault();d.classList.add("drag-over");};
+  d.ondragleave=()=>d.classList.remove("drag-over");
+  d.ondrop=e=>{
+    e.preventDefault();d.classList.remove("drag-over");
+    handleDrop(e.dataTransfer.getData("id"),key,d);
+  };
+  b.appendChild(d);
+ });
+}
+
+/* =======================
+   LOAD ANIMALS
+======================= */
+function loadAnimals(){
+ state.level=document.getElementById("level").value;
+ state.animals=[...POOL[state.level]].map((a,i)=>({
+  id:i+Date.now(),
+  name:a[0],emoji:a[1],cat:a[2]
+ }));
+}
+
+/* =======================
+   RENDER ITEMS
+======================= */
+function renderItems(){
+ const i=document.getElementById("items");
+ i.innerHTML="";
+ state.animals.forEach(a=>{
+  const d=document.createElement("div");
+  d.className="draggable bg-white text-black px-4 py-2 rounded-lg flex gap-2";
+  d.innerHTML=`<span class="text-2xl">${a.emoji}</span>${a.name}`;
   d.draggable=true;
   d.dataset.id=a.id;
-  d.innerHTML=`<span class="text-2xl">${a.emoji}</span>${a.name}`;
+  d.onclick=()=>state.mode==="tap" && tapSelect(a);
   d.ondragstart=e=>e.dataTransfer.setData("id",a.id);
-  itemsDiv.appendChild(d);
+  i.appendChild(d);
  });
+}
+
+/* =======================
+   DROP LOGIC
+======================= */
+function handleDrop(id,cat,bucket){
+ const a=state.animals.find(x=>x.id==id);
+ if(!a) return;
+ if(a.cat===cat){
+  state.score+=10;
+  bucket.querySelector(".bucket-items").innerHTML+=a.emoji;
+  state.animals=state.animals.filter(x=>x.id!==a.id);
+ } else {
+  state.lives--;
+ }
+ checkGame();
+ renderItems();
  updateUI();
 }
 
-document.querySelectorAll(".bucket").forEach(b=>{
- b.ondragover=e=>{e.preventDefault();b.classList.add("drag-over");};
- b.ondragleave=()=>b.classList.remove("drag-over");
- b.ondrop=e=>{
-  e.preventDefault();
-  b.classList.remove("drag-over");
-  const id=+e.dataTransfer.getData("id");
-  const animal=animals.find(x=>x.id===id);
-  if(animal.category===b.dataset.category){
-    state.score+=10;
-    state.streak++;
-    state.sorted.push(animal);
-    state.remaining=state.remaining.filter(x=>x.id!==id);
-    b.querySelector(".bucket-items").innerHTML+=`<span>${animal.emoji}</span>`;
-    render();
-  } else {
-    state.streak=0;
-  }
- }
-});
+/* =======================
+   TAP MODE
+======================= */
+let selected=null;
+function tapSelect(a){
+ selected=a;
+ alert("Now tap correct bucket");
+}
 
+/* =======================
+   GAME STATUS
+======================= */
+function checkGame(){
+ if(state.lives<=0){
+  alert("Game Over");
+  resetGame();
+ }
+ if(state.animals.length===0){
+  alert("Level Complete!");
+ }
+}
+
+/* =======================
+   UI
+======================= */
 function updateUI(){
  document.getElementById("score").textContent=state.score;
- document.getElementById("streak").textContent="🔥 "+state.streak;
- document.getElementById("progress-text").textContent=
-  `${state.sorted.length} / ${animals.length}`;
- document.getElementById("progress-bar").style.width=
-  (state.sorted.length/animals.length*100)+"%";
+ document.getElementById("lives").textContent="❤️".repeat(state.lives);
+ document.getElementById("hints").textContent="💡".repeat(state.hints);
+}
+
+/* =======================
+   CONTROLS
+======================= */
+function toggleMode(){
+ state.mode=state.mode==="drag"?"tap":"drag";
+ alert("Mode: "+state.mode);
 }
 
 function resetGame(){
- state={score:0,streak:0,sorted:[],remaining:[...animals]};
+ state.score=0;state.lives=3;state.hints=2;
+ loadAnimals();
  document.querySelectorAll(".bucket-items").forEach(b=>b.innerHTML="");
- render();
+ renderItems();updateUI();
 }
-
-render();
 </script>
+
 </body>
 </html>
